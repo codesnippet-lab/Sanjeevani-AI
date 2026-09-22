@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sanjeevani AI - Multilingual Voice Case Taking</title>
+  <meta name="description" content="Multilingual voice assistant for patient case taking and clinical triage supporting English, Hindi, and Kannada." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#0F2F4A',
+              primary: '#1B4E7A',
+              teal: '#2E9E6B',
+              darkteal: '#1C6B3A',
+              sand: '#F3F8F7',
+              border: '#D7E6E1',
+              muted: '#4C7C72'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Noto Sans Devanagari"', '"Noto Sans Kannada"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      background-color: #F3F8F7;
+      color: #16232B;
+      font-family: 'Plus Jakarta Sans', 'Noto Sans Devanagari', 'Noto Sans Kannada', sans-serif;
+    }
+    .pulse-ring {
+      animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 158, 107, 0.6); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(46, 158, 107, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 158, 107, 0); }
+    }
+    .listening-wave span {
+      display: inline-block;
+      width: 4px;
+      height: 16px;
+      border-radius: 9999px;
+      background-color: #EF4444;
+      animation: wave 1s ease-in-out infinite;
+    }
+    .listening-wave span:nth-child(2) { animation-delay: 0.15s; height: 24px; }
+    .listening-wave span:nth-child(3) { animation-delay: 0.3s; height: 32px; }
+    .listening-wave span:nth-child(4) { animation-delay: 0.45s; height: 20px; }
+    .listening-wave span:nth-child(5) { animation-delay: 0.6s; height: 12px; }
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.4); }
+      50% { transform: scaleY(1.2); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-teal-100 selection:text-teal-900">
+
+  <!-- TOP HEADER -->
+  <header class="bg-white border-b border-[#D7E6E1] sticky top-0 z-40 shadow-xs">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#1B4E7A] text-white flex items-center justify-center shadow-sm">
+          <i data-lucide="activity" class="w-6 h-6 text-[#2E9E6B]"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-extrabold text-[#0F2F4A] tracking-tight">
+              Sanjeevani <span class="text-[#2E9E6B]">AI</span>
+            </h1>
+            <span class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DDEFE2] text-[#1C6B3A]">
+              Voice Case Taking
+            </span>
+          </div>
+          <p class="text-xs text-[#4C7C72] font-medium">Multilingual Clinical Triage · SIH 2026</p>
+        </div>
+      </div>
+
+      <!-- Actions: Language + Mode + Download -->
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <!-- Language Switcher -->
+        <div class="flex items-center bg-[#F3F8F7] border border-[#D7E6E1] rounded-xl p-1 text-xs">
+          <i data-lucide="globe" class="w-3.5 h-3.5 text-[#4C7C72] ml-1 mr-1"></i>
+          <button id="lang-btn-en" onclick="setLanguage('en')" class="px-2 py-1 font-bold rounded-lg bg-[#1B4E7A] text-white transition-all">English</button>
+          <button id="lang-btn-hi" onclick="setLanguage('hi')" class="px-2 py-1 font-bold rounded-lg text-[#4C7C72] hover:text-[#0F2F4A] transition-all">हिन्दी</button>
+          <button id="lang-btn-kn" onclick="setLanguage('kn')" class="px-2 py-1 font-bold rounded-lg text-[#4C7C72] hover:text-[#0F2F4A] transition-all">ಕನ್ನಡ</button>
+        </div>
+
+        <!-- Mode Toggle -->
+        <div class="flex bg-[#F3F8F7] border border-[#D7E6E1] rounded-xl p-1 text-xs">
+          <button id="mode-patient-tab" onclick="switchMode('patient')" class="flex items-center gap-1.5 px-3 py-1 font-bold rounded-lg bg-[#1B4E7A] text-white transition-all">
+            <i data-lucide="user" class="w-3.5 h-3.5"></i>
+            <span>Patient</span>
+          </button>
+          <button id="mode-doctor-tab" onclick="switchMode('doctor')" class="flex items-center gap-1.5 px-3 py-1 font-bold rounded-lg text-[#4C7C72] hover:text-[#0F2F4A] transition-all relative">
+            <i data-lucide="stethoscope" class="w-3.5 h-3.5"></i>
+            <span>Doctor Queue</span>
+            <span id="header-redflag-dot" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse hidden"></span>
+          </button>
+        </div>
+
+        <!-- Direct HTML Download Link -->
+        <button onclick="downloadSelfHTML()" title="Download this standalone HTML file" class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 transition-colors">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Save HTML</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6">
+
+    <!-- VOICE ASSISTANT CONTROL PANEL (Patient Mode) -->
+    <section id="voice-assistant-panel" class="mb-6 rounded-2xl bg-white border border-[#D7E6E1] p-4 sm:p-5 shadow-sm">
+      <div class="flex items-center justify-between gap-3 border-b border-[#D7E6E1] pb-3 mb-3">
+        <div class="flex items-center gap-2.5">
+          <div id="ai-mic-indicator" class="w-9 h-9 rounded-xl bg-teal-50 text-[#1C6B3A] flex items-center justify-center">
+            <i data-lucide="bot" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="ai-assistant-title" class="text-sm font-extrabold text-[#0F2F4A]">Voice Assistant Active</h2>
+              <span id="ai-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Ready</span>
+            </div>
+            <p id="ai-assistant-subtitle" class="text-xs text-[#4C7C72]">Tap mic or speak in your language to answer</p>
+          </div>
+        </div>
+
+        <!-- Controls: Repeat question, Stop sound, Toggle auto-speak -->
+        <div class="flex items-center gap-1.5">
+          <button id="btn-repeat-voice" onclick="repeatCurrentPrompt()" class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl border border-[#D7E6E1] bg-[#F3F8F7] text-[#0F2F4A] hover:bg-slate-100 transition-colors">
+            <i data-lucide="volume-2" class="w-3.5 h-3.5 text-teal-700"></i>
+            <span id="btn-repeat-text">Repeat</span>
+          </button>
+          <button id="btn-stop-voice" onclick="stopSpeechPlayback()" class="p-1.5 rounded-xl border border-[#D7E6E1] bg-[#F3F8F7] text-slate-600 hover:bg-slate-100 transition-colors" title="Stop audio">
+            <i data-lucide="volume-x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Voice Interactive Bar -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-3.5 rounded-xl bg-[#F3F8F7] border border-[#D7E6E1]">
+        <!-- Mic Button + Animation -->
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <button id="main-mic-button" onclick="toggleVoiceInput()" class="relative flex-shrink-0 w-12 h-12 rounded-2xl bg-[#1B4E7A] text-white flex items-center justify-center hover:bg-[#0F2F4A] transition-all shadow-md active:scale-95">
+            <i id="main-mic-icon" data-lucide="mic" class="w-6 h-6"></i>
+          </button>
+          <div>
+            <p id="mic-status-label" class="text-xs font-bold text-[#0F2F4A]">Click to Speak / बोलें / ಮಾತನಾಡಿ</p>
+            <p id="mic-detected-transcript" class="text-xs text-[#4C7C72] italic truncate max-w-[280px] sm:max-w-xs">Awaiting your response...</p>
+          </div>
+        </div>
+
+        <!-- Voice Sound Waves (Listening visualizer) -->
+        <div id="listening-wave-container" class="hidden flex items-center gap-1 listening-wave py-1 px-3 bg-red-50 border border-red-200 rounded-xl">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span class="text-xs font-bold text-red-600 ml-2">Listening...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP PROGRESS BAR (Patient Mode) -->
+    <div id="patient-progress-container" class="mb-6">
+      <div class="flex items-center justify-between text-xs font-bold text-[#4C7C72] mb-1.5">
+        <span id="progress-step-text">Step 1 of 5: Language Selection</span>
+        <span id="progress-percent-text">20% Completed</span>
+      </div>
+      <div class="w-full bg-[#D7E6E1] rounded-full h-2 overflow-hidden">
+        <div id="progress-bar-fill" class="bg-[#2E9E6B] h-2 rounded-full transition-all duration-300" style="width: 20%"></div>
+      </div>
+    </div>
+
+    <!-- ==================== PATIENT VIEWS ==================== -->
+    <div id="patient-flow-container">
+
+      <!-- STEP 0: LANGUAGE SELECTION -->
+      <section id="step-0-language" class="bg-white rounded-2xl border border-[#D7E6E1] p-6 shadow-sm">
+        <h2 class="text-xl font-extrabold text-[#0F2F4A] mb-1">Select Your Preferred Language</h2>
+        <p class="text-sm text-[#4C7C72] mb-6">Choose how you want Sanjeevani AI to speak and listen with you.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <!-- English -->
+          <div onclick="setLanguageAndAdvance('en')" class="p-5 rounded-2xl border-2 border-[#D7E6E1] hover:border-[#1B4E7A] bg-[#F3F8F7] hover:bg-white cursor-pointer transition-all text-center group">
+            <span class="text-3xl mb-2 block">🇬🇧</span>
+            <h3 class="font-bold text-base text-[#0F2F4A] group-hover:text-[#1B4E7A]">English</h3>
+            <p class="text-xs text-[#4C7C72] mt-1">Default clinical intake</p>
+          </div>
+
+          <!-- Hindi -->
+          <div onclick="setLanguageAndAdvance('hi')" class="p-5 rounded-2xl border-2 border-[#D7E6E1] hover:border-[#1B4E7A] bg-[#F3F8F7] hover:bg-white cursor-pointer transition-all text-center group">
+            <span class="text-3xl mb-2 block">🇮🇳</span>
+            <h3 class="font-bold text-base text-[#0F2F4A] group-hover:text-[#1B4E7A]">हिन्दी (Hindi)</h3>
+            <p class="text-xs text-[#4C7C72] mt-1">आवाज और पाठ दोनों</p>
+          </div>
+
+          <!-- Kannada -->
+          <div onclick="setLanguageAndAdvance('kn')" class="p-5 rounded-2xl border-2 border-[#D7E6E1] hover:border-[#1B4E7A] bg-[#F3F8F7] hover:bg-white cursor-pointer transition-all text-center group">
+            <span class="text-3xl mb-2 block">🇮🇳</span>
+            <h3 class="font-bold text-base text-[#0F2F4A] group-hover:text-[#1B4E7A]">ಕನ್ನಡ (Kannada)</h3>
+            <p class="text-xs text-[#4C7C72] mt-1">ಧ್ವನಿ ಮತ್ತು ಪಠ್ಯ ಬೆಂಬಲ</p>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button onclick="goToStep(1)" class="px-6 py-2.5 rounded-xl bg-[#1B4E7A] text-white font-bold hover:bg-[#0F2F4A] flex items-center gap-2">
+            <span>Continue</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 1: CONSENT & ABDM -->
+      <section id="step-1-consent" class="hidden bg-white rounded-2xl border border-[#D7E6E1] p-6 shadow-sm">
+        <h2 id="consent-title" class="text-xl font-extrabold text-[#0F2F4A] mb-1">Patient Consent & Digital ID</h2>
+        <p id="consent-subtitle" class="text-sm text-[#4C7C72] mb-6">Your privacy is protected under National Digital Health Mission guidelines.</p>
+
+        <div class="space-y-4 mb-6">
+          <label class="flex items-start gap-3 p-4 rounded-xl border border-[#D7E6E1] bg-[#F3F8F7] cursor-pointer hover:bg-slate-50 transition-colors">
+            <input type="checkbox" id="consent-data-sharing" checked class="mt-1 w-4 h-4 rounded text-teal-600 focus:ring-teal-500" />
+            <div>
+              <p id="consent-share-text" class="text-sm font-bold text-[#0F2F4A]">Share clinical summary with on-duty Doctor</p>
+              <p class="text-xs text-[#4C7C72] mt-0.5">Allows attending physician to review symptoms and vitals beforehand.</p>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-3 p-4 rounded-xl border border-[#D7E6E1] bg-[#F3F8F7] cursor-pointer hover:bg-slate-50 transition-colors">
+            <input type="checkbox" id="consent-abdm-link" checked class="mt-1 w-4 h-4 rounded text-teal-600 focus:ring-teal-500" />
+            <div>
+              <p id="consent-abdm-text" class="text-sm font-bold text-[#0F2F4A]">Link with Ayushman Bharat Health Account (ABHA / ABDM)</p>
+              <p class="text-xs text-[#4C7C72] mt-0.5">ABHA ID: 91-4428-1192-3021 (Auto-detected for demo session)</p>
+            </div>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-[#D7E6E1]">
+          <button onclick="goToStep(0)" class="px-5 py-2 rounded-xl border border-[#D7E6E1] text-[#0F2F4A] font-bold hover:bg-slate-50">Back</button>
+          <button onclick="goToStep(2)" class="px-6 py-2.5 rounded-xl bg-[#1B4E7A] text-white font-bold hover:bg-[#0F2F4A] flex items-center gap-2">
+            <span>Next: Chief Complaint</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 2: CHIEF COMPLAINT -->
+      <section id="step-2-complaint" class="hidden bg-white rounded-2xl border border-[#D7E6E1] p-6 shadow-sm">
+        <h2 id="complaint-title" class="text-xl font-extrabold text-[#0F2F4A] mb-1">What brings you in today?</h2>
+        <p id="complaint-subtitle" class="text-sm text-[#4C7C72] mb-6">Select your primary symptom or say it into the microphone.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-6" id="complaints-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-[#D7E6E1]">
+          <button onclick="goToStep(1)" class="px-5 py-2 rounded-xl border border-[#D7E6E1] text-[#0F2F4A] font-bold hover:bg-slate-50">Back</button>
+          <button id="complaint-next-btn" onclick="startQuestionTree()" disabled class="px-6 py-2.5 rounded-xl bg-slate-300 text-slate-500 font-bold cursor-not-allowed flex items-center gap-2">
+            <span>Next: Clinical Questions</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 3: QUESTIONS TREE -->
+      <section id="step-3-questions" class="hidden bg-white rounded-2xl border border-[#D7E6E1] p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <span id="question-count-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+            Question 1 of 4
+          </span>
+          <span id="question-redflag-tag" class="hidden px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-red-100 text-red-800 animate-pulse">
+            ⚠️ Triage Warning
+          </span>
+        </div>
+
+        <h3 id="current-question-text" class="text-lg font-extrabold text-[#0F2F4A] mb-2 leading-relaxed">
+          How long have you had this fever?
+        </h3>
+        <p id="question-instruction" class="text-xs text-[#4C7C72] mb-5">Click an option below or speak your choice aloud.</p>
+
+        <!-- Options Container -->
+        <div id="question-options-container" class="space-y-3 mb-6">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-[#D7E6E1]">
+          <button onclick="previousQuestion()" class="px-5 py-2 rounded-xl border border-[#D7E6E1] text-[#0F2F4A] font-bold hover:bg-slate-50">Back</button>
+          <button id="question-next-btn" onclick="nextQuestion()" disabled class="px-6 py-2.5 rounded-xl bg-slate-300 text-slate-500 font-bold cursor-not-allowed flex items-center gap-2">
+            <span>Next Question</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 4: SCAN RECORDS & PRESCRIPTIONS -->
+      <section id="step-4-scan" class="hidden bg-white rounded-2xl border border-[#D7E6E1] p-6 shadow-sm">
+        <h2 id="scan-title" class="text-xl font-extrabold text-[#0F2F4A] mb-1">Scan Previous Medical Records</h2>
+        <p id="scan-subtitle" class="text-sm text-[#4C7C72] mb-5">Attach old prescriptions, lab reports, or discharge summaries (Optional).</p>
+
+        <!-- Upload Drag & Drop Area -->
+        <div id="drop-zone" class="border-2 border-dashed border-[#D7E6E1] hover:border-teal-500 rounded-2xl p-6 text-center bg-[#F3F8F7] mb-5 transition-colors cursor-pointer" onclick="document.getElementById('file-upload-input').click()">
+          <input type="file" id="file-upload-input" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload(event)" />
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-white border border-[#D7E6E1] text-teal-700 flex items-center justify-center mb-3 shadow-xs">
+            <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+          </div>
+          <p class="text-sm font-bold text-[#0F2F4A]">Click or Drag & Drop Prescription / Lab Slip</p>
+          <p class="text-xs text-[#4C7C72] mt-1">JPEG, PNG, or PDF up to 10MB</p>
+          <button type="button" class="mt-3 px-4 py-1.5 text-xs font-bold rounded-lg bg-white border border-[#D7E6E1] text-[#0F2F4A] hover:bg-slate-100">
+            Browse File
+          </button>
+        </div>
+
+        <!-- Sample Records Quick Test -->
+        <div class="mb-6">
+          <p class="text-xs font-bold text-[#4C7C72] uppercase tracking-wider mb-2">Or load sample verified hospital record:</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button onclick="loadSampleDoc('bp_prescription')" class="text-left p-3 rounded-xl border border-[#D7E6E1] bg-white hover:border-teal-600 transition-colors">
+              <p class="text-xs font-bold text-[#0F2F4A]">Cardiology Slip (Amlodipine 5mg)</p>
+              <p class="text-[11px] text-[#4C7C72]">Dr. R. Sharma · BP 150/94 · 12 Jan 2026</p>
+            </button>
+            <button onclick="loadSampleDoc('cbc_report')" class="text-left p-3 rounded-xl border border-[#D7E6E1] bg-white hover:border-teal-600 transition-colors">
+              <p class="text-xs font-bold text-[#0F2F4A]">Blood Test (Hb 10.2 · TLC 12,400)</p>
+              <p class="text-[11px] text-[#4C7C72]">City Lab · Mild Leukocytosis</p>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scanned Records List -->
+        <div id="scanned-docs-list" class="space-y-2 mb-6">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-[#D7E6E1]">
+          <button onclick="goToStep(3)" class="px-5 py-2 rounded-xl border border-[#D7E6E1] text-[#0F2F4A] font-bold hover:bg-slate-50">Back</button>
+          <button onclick="goToStep(5)" class="px-6 py-2.5 rounded-xl bg-[#1B4E7A] text-white font-bold hover:bg-[#0F2F4A] flex items-center gap-2">
+            <span>Generate Clinical Summary</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 5: CLINICAL SUMMARY & SUBMIT -->
+      <section id="step-5-summary" class="hidden bg-white rounded-2xl border border-[#D7E6E1] p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 id="summary-title" class="text-xl font-extrabold text-[#0F2F4A]">Pre-Consultation Case Sheet</h2>
+            <p class="text-xs text-[#4C7C72]">Ready for transmission to the OPD Doctor queue</p>
+          </div>
+          <span id="summary-triage-badge" class="px-3 py-1 rounded-full text-xs font-extrabold bg-teal-100 text-teal-800">
+            Routine OPD
+          </span>
+        </div>
+
+        <!-- Red Flag Alert Box (if triggered) -->
+        <div id="summary-redflag-alert" class="hidden mb-4 p-4 rounded-xl bg-red-50 border-2 border-red-300">
+          <div class="flex items-center gap-2 text-red-800 font-extrabold text-sm mb-1">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i>
+            <span>Red Flag Indicator Flagged</span>
+          </div>
+          <p id="summary-redflag-text" class="text-xs text-red-700 font-medium">
+            Symptoms require immediate attention. Triage priority updated to EMERGENCY.
+          </p>
+        </div>
+
+        <!-- Case Sheet Content Card -->
+        <div class="rounded-xl border border-[#D7E6E1] bg-[#F3F8F7] p-4.5 space-y-4 mb-6">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pb-3 border-b border-[#D7E6E1]">
+            <div>
+              <p class="text-[#4C7C72]">Patient Name</p>
+              <p class="font-bold text-[#0F2F4A]">Ramesh K. (48M)</p>
+            </div>
+            <div>
+              <p class="text-[#4C7C72]">ABHA Token</p>
+              <p class="font-bold text-[#0F2F4A]">#91-4428-1192</p>
+            </div>
+            <div>
+              <p class="text-[#4C7C72]">Chief Complaint</p>
+              <p id="summary-complaint-name" class="font-bold text-teal-800">Fever & Bodyache</p>
+            </div>
+            <div>
+              <p class="text-[#4C7C72]">Language</p>
+              <p id="summary-language-name" class="font-bold text-[#0F2F4A]">English</p>
+            </div>
+          </div>
+
+          <!-- Structured Answers Review -->
+          <div>
+            <h4 class="text-xs font-bold text-[#4C7C72] uppercase tracking-wider mb-2">Recorded Clinical Answers:</h4>
+            <div id="summary-answers-list" class="space-y-2 text-sm">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Scanned Records Preview -->
+          <div id="summary-scanned-container" class="hidden pt-3 border-t border-[#D7E6E1]">
+            <h4 class="text-xs font-bold text-[#4C7C72] uppercase tracking-wider mb-1.5">Attached Medical Documents:</h4>
+            <p id="summary-scanned-count" class="text-xs font-semibold text-[#0F2F4A]">1 document attached</p>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#D7E6E1]">
+          <button onclick="goToStep(4)" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[#D7E6E1] text-[#0F2F4A] font-bold hover:bg-slate-50">
+            Edit Information
+          </button>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <button onclick="readSummaryAloud()" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-teal-300 bg-teal-50 text-teal-800 font-bold hover:bg-teal-100 flex items-center justify-center gap-1.5">
+              <i data-lucide="volume-2" class="w-4 h-4"></i>
+              <span>Listen Summary</span>
+            </button>
+            <button onclick="submitCaseToDoctorQueue()" class="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-[#2E9E6B] hover:bg-[#1C6B3A] text-white font-extrabold flex items-center justify-center gap-2 shadow-sm">
+              <i data-lucide="check-circle" class="w-5 h-5"></i>
+              <span>Submit to OPD</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ==================== DOCTOR QUEUE DASHBOARD ==================== -->
+    <section id="doctor-dashboard-view" class="hidden bg-white rounded-2xl border border-[#D7E6E1] p-6 shadow-sm">
+      <div class="flex items-center justify-between pb-4 border-b border-[#D7E6E1] mb-6 flex-wrap gap-3">
+        <div>
+          <h2 class="text-xl font-extrabold text-[#0F2F4A]">OPD Doctor Triage Console</h2>
+          <p class="text-xs text-[#4C7C72]">Real-time patient intake summaries powered by Sanjeevani AI</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+            <span id="doc-queue-count">4 Patients Waiting</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Patient Queue List -->
+        <div class="space-y-2.5 md:col-span-1" id="doctor-patient-queue">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Selected Patient Detail -->
+        <div class="md:col-span-2 rounded-2xl border border-[#D7E6E1] bg-[#F3F8F7] p-5">
+          <div id="doctor-patient-detail">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-notification" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none max-w-sm bg-[#0F2F4A] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3">
+    <i data-lucide="info" class="w-5 h-5 text-[#2E9E6B] flex-shrink-0"></i>
+    <p id="toast-text" class="text-xs font-medium">Notification</p>
+  </div>
+
+  <!-- APPLICATION LOGIC IN JAVASCRIPT -->
+  <script>
+    // Clinical Data & Question Trees
+    const COMPLAINTS = [
+      {
+        id: 'fever',
+        nameEn: 'Fever & Chills',
+        nameHi: 'बुखार और कंपकंपी',
+        nameKn: 'ಜ್ವರ ಮತ್ತು ಚಳಿ',
+        icon: 'thermometer',
+        redFlag: false,
+        questions: [
+          {
+            id: 'fever_duration',
+            textEn: 'How many days have you had this fever?',
+            textHi: 'आपको कितने दिनों से बुखार है?',
+            textKn: 'ನಿಮಗೆ ಎಷ್ಟು ದಿನಗಳಿಂದ ಜ್ವರವಿದೆ?',
+            options: [
+              { labelEn: '1-2 Days', labelHi: '१-२ दिन', labelKn: '೧-೨ ದಿನಗಳು', redFlag: false },
+              { labelEn: '3-5 Days', labelHi: '३-५ दिन', labelKn: '೩-೫ ದಿನಗಳು', redFlag: false },
+              { labelEn: 'More than 7 days (High risk)', labelHi: '७ दिन से ज्यादा (उच्च जोखिम)', labelKn: '೭ ದಿನಗಳಿಗಿಂತ ಹೆಚ್ಚು', redFlag: true }
+            ]
+          },
+          {
+            id: 'fever_associated',
+            textEn: 'Are you having severe chills, vomiting or body rash?',
+            textHi: 'क्या आपको तेज कंपकंपी, उल्टी या शरीर पर चकत्ते हैं?',
+            textKn: 'ನಿಮಗೆ ತೀವ್ರ ಚಳಿ, ವಾಂತಿ ಅಥವಾ ಚರ್ಮದ ದದ್ದುಗಳಿವೆಯೇ?',
+            options: [
+              { labelEn: 'No other major symptoms', labelHi: 'कोई अन्य लक्षण नहीं', labelKn: 'ಇತರ ಯಾವುದೇ ಲಕ್ಷಣಗಳಿಲ್ಲ', redFlag: false },
+              { labelEn: 'Yes, intense bodyache & headache', labelHi: 'हाँ, तेज बदन दर्द और सिरदर्द', labelKn: 'ಹೌದು, ತೀವ್ರ ಮೈಕೈ ನೋವು', redFlag: false },
+              { labelEn: 'Yes, petechial rash or bleeding gums', labelHi: 'हाँ, लाल चकत्ते या मसूड़ों से खून', labelKn: 'ಹೌದು, ಚರ್ಮದ ರಕ್ತಸ್ರಾವ/ದದ್ದು', redFlag: true }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'chest_pain',
+        nameEn: 'Chest Pain / Heaviness',
+        nameHi: 'छाती में दर्द या भारीपन',
+        nameKn: 'ಎದೆ ನೋವು ಅಥವಾ ಭಾರ',
+        icon: 'heart-pulse',
+        redFlag: true,
+        questions: [
+          {
+            id: 'chest_pain_type',
+            textEn: 'Is the pain spreading to your left arm, jaw or accompanied by sweating?',
+            textHi: 'क्या दर्द बाएं हाथ, जबड़े में जा रहा है या पसीना आ रहा है?',
+            textKn: 'ನೋವು ಎಡಗೈಗೆ, ದವಡೆಗೆ ಹರಡುತ್ತಿದೆಯೇ ಅಥವಾ ಬೆವರು ಬರುತ್ತಿದೆಯೇ?',
+            options: [
+              { labelEn: 'Yes, spreading to left arm & sweating (EMERGENCY)', labelHi: 'हाँ, बाएं हाथ में फैल रहा है व पसीना', labelKn: 'ಹೌದು, ಎಡಗೈಗೆ ಹರಡುತ್ತಿದೆ (ತುರ್ತು)', redFlag: true },
+              { labelEn: 'Sharp pain when breathing or coughing', labelHi: 'सांस लेने या खांसने पर दर्द', labelKn: 'ಉಸಿರಾಡುವಾಗ ಚುಚ್ಚುವ ನೋವು', redFlag: false },
+              { labelEn: 'Burning sensation after meals (Acidity)', labelHi: 'खाने के बाद जलन (एसिडिटी)', labelKn: 'ಊಟದ ನಂತರ ಎದೆಯುರಿ', redFlag: false }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'cough',
+        nameEn: 'Cough & Shortness of Breath',
+        nameHi: 'खांसी और सांस फूलना',
+        nameKn: 'ಕೆಮ್ಮು ಮತ್ತು ಉಸಿರಾಟದ ತೊಂದರೆ',
+        icon: 'wind',
+        redFlag: false,
+        questions: [
+          {
+            id: 'cough_type',
+            textEn: 'Do you have difficulty breathing even while resting?',
+            textHi: 'क्या आपको आराम करते समय भी सांस लेने में तकलीफ होती है?',
+            textKn: 'ವಿಶ್ರಾಂತಿ ಪಡೆಯುವಾಗಲೂ ನಿಮಗೆ ಉಸಿರಾಟದ ತೊಂದರೆ ಇದೆಯೇ?',
+            options: [
+              { labelEn: 'Yes, severe breathless at rest (URGENT)', labelHi: 'हाँ, बैठे-बैठे भी भारी सांस फूलती है', labelKn: 'ಹೌದು, ಕುಳಿತಾಗಲೂ ಉಸಿರಾಟ ಕಷ್ಟ', redFlag: true },
+              { labelEn: 'Dry irritating cough with mild throat pain', labelHi: 'सूखी खांसी और गले में खराश', labelKn: 'ಒಣ ಕೆಮ್ಮು ಮತ್ತು ಗಂಟಲು ನೋವು', redFlag: false },
+              { labelEn: 'Productive phlegm cough for over 2 weeks', labelHi: '२ सप्ताह से अधिक बलगम वाली खांसी', labelKn: '೨ ವಾರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಕಫದ ಕೆಮ್ಮು', redFlag: false }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'stomach',
+        nameEn: 'Abdominal Pain / Diarrhea',
+        nameHi: 'पेट दर्द या दस्त',
+        nameKn: 'ಹೊಟ್ಟೆ ನೋವು ಅಥವಾ ಅತಿಸಾರ',
+        icon: 'circle-dot',
+        redFlag: false,
+        questions: [
+          {
+            id: 'stomach_location',
+            textEn: 'Where is the pain located and is there continuous vomiting?',
+            textHi: 'दर्द कहाँ है और क्या लगातार उल्टियां हो रही हैं?',
+            textKn: 'ಹೊಟ್ಟೆಯ ಯಾವ ಭಾಗದಲ್ಲಿ ನೋವಿದೆ ಮತ್ತು ನಿರಂತರ ವಾಂತಿ ಆಗುತ್ತಿದೆಯೇ?',
+            options: [
+              { labelEn: 'Lower right side severe sharp pain (Appendicitis risk)', labelHi: 'दाहिनी ओर नीचे तेज दर्द', labelKn: 'ಬಲ ಹೊಟ್ಟೆಯ ಕೆಳಭಾಗದಲ್ಲಿ ತೀವ್ರ ನೋವು', redFlag: true },
+              { labelEn: 'Upper stomach cramp after food', labelHi: 'ऊपरी पेट में मरोड़', labelKn: 'ಊಟದ ನಂತರ ಮೇಲ್ಭಾಗದಲ್ಲಿ ನೋವು', redFlag: false },
+              { labelEn: 'Watery loose motions 3-4 times', labelHi: 'पानी जैसे पतले दस्त ३-४ बार', labelKn: '೩-೪ ಬಾರಿ ಅತಿಸಾರ', redFlag: false }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'headache',
+        nameEn: 'Severe Headache / Dizziness',
+        nameHi: 'तेज सिरदर्द या चक्कर',
+        nameKn: 'ತೀವ್ರ ತಲೆನೋವು ಅಥವಾ ತಲೆತಿರುಗುವಿಕೆ',
+        icon: 'brain',
+        redFlag: false,
+        questions: [
+          {
+            id: 'headache_onset',
+            textEn: 'Was this a sudden "thunderclap" headache with blurred vision or slurred speech?',
+            textHi: 'क्या यह अचानक भयंकर सिरदर्द है जिसके साथ धुंधलापन या बोली लड़खड़ा रही है?',
+            textKn: 'ಇದು ದೃಷ್ಟಿ ಮಂದವಾಗುವುದರೊಂದಿಗೆ ಹಠಾತ್ ಬಂದ ತೀವ್ರ ತಲೆನೋವೇ?',
+            options: [
+              { labelEn: 'Yes, sudden thunderclap with slurred speech (STROKE RISK)', labelHi: 'हाँ, अचानक भयंकर दर्द व बोली लड़खड़ाना', labelKn: 'ಹೌದು, ಹಠಾತ್ ತೀವ್ರ ತಲೆನೋವು (ತುರ್ತು)', redFlag: true },
+              { labelEn: 'Throbbing one-sided pain (Migraine pattern)', labelHi: 'एक तरफ फड़कता हुआ दर्द', labelKn: 'ಒಂದು ಕಡೆ ಬಡಿತದ ನೋವು', redFlag: false },
+              { labelEn: 'Dull ache around forehead and neck', labelHi: 'माथे और गर्दन के आसपास धीमा दर्द', labelKn: 'ಹಣೆಯ ಸುತ್ತಲೂ ಸಾಮಾನ್ಯ ನೋವು', redFlag: false }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'chronic',
+        nameEn: 'Diabetes / Blood Pressure Check',
+        nameHi: 'मधुमेह (शुगर) / बीपी नियंत्रण',
+        nameKn: 'ಮಧುಮೇಹ / ರಕ್ತದೊತ್ತಡ ತಪಾಸಣೆ',
+        icon: 'clipboard-plus',
+        redFlag: false,
+        questions: [
+          {
+            id: 'chronic_compliance',
+            textEn: 'Are you taking your regular prescribed medicines daily?',
+            textHi: 'क्या आप अपनी सुझाई गई दवाएं रोजाना ले रहे हैं?',
+            textKn: 'ನೀವು ಸೂಚಿಸಲಾದ ಔಷಧಿಗಳನ್ನು ಪ್ರತಿದಿನ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿದ್ದೀರಾ?',
+            options: [
+              { labelEn: 'Yes, taking all daily prescribed medicines', labelHi: 'हाँ, नियमित रूप से दवा ले रहे हैं', labelKn: 'ಹೌದು, ನಿರಂತರ ಔಷಧಿ ಸೇವನೆ', redFlag: false },
+              { labelEn: 'Missed doses due to running out of tablets', labelHi: 'दवा खत्म होने से कुछ दिन छूट गई', labelKn: 'ಮಾತ್ರೆಗಳು ಖಾಲಿಯಾದ ಕಾರಣ ಬಿಟ್ಟಿದ್ದೇನೆ', redFlag: false },
+              { labelEn: 'Feeling extreme thirst, dizziness or numbness in feet', labelHi: 'अत्यधिक प्यास, चक्कर या पैरों में सुन्नपन', labelKn: 'ಹೆಚ್ಚು ಬಾಯಾರಿಕೆ, ಪಾದಗಳಲ್ಲಿ ಜುಮ್ಮೆನ್ನಿಸುವಿಕೆ', redFlag: false }
+            ]
+          }
+        ]
+      }
+    ];
+
+    // State Variables
+    let currentLang = 'en';
+    let currentStep = 0;
+    let selectedComplaint = null;
+    let currentQuestionIdx = 0;
+    let patientAnswers = {};
+    let isRedFlag = false;
+    let scannedDocs = [];
+    let isSpeaking = false;
+    let isListening = false;
+    let speechRecognitionInstance = null;
+
+    // Doctor Queue Data
+    let doctorQueue = [
+      { id: 101, name: 'Sumantha Rao', age: '54M', complaint: 'Chest Tightness & Sweating', priority: 'CRITICAL', waitTime: '3 min ago', time: '10:15 AM' },
+      { id: 102, name: 'Lakshmi Devi', age: '39F', complaint: 'Fever (3 days) & Bodyache', priority: 'MODERATE', waitTime: '8 min ago', time: '10:10 AM' },
+      { id: 103, name: 'Raju G.', age: '62M', complaint: 'Routine Hypertension Follow-up', priority: 'ROUTINE', waitTime: '15 min ago', time: '10:03 AM' }
+    ];
+    let selectedDoctorPatientId = 101;
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      initLucide();
+      renderComplaints();
+      initSpeechRecognition();
+      speakGreeting();
+    });
+
+    function initLucide() {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    // Language Selector
+    function setLanguage(lang) {
+      currentLang = lang;
+      ['en', 'hi', 'kn'].forEach(l => {
+        const btn = document.getElementById(`lang-btn-${l}`);
+        if (l === lang) {
+          btn.className = 'px-2 py-1 font-bold rounded-lg bg-[#1B4E7A] text-white transition-all';
+        } else {
+          btn.className = 'px-2 py-1 font-bold rounded-lg text-[#4C7C72] hover:text-[#0F2F4A] transition-all';
+        }
+      });
+      updateStepLanguageUI();
+      showToast(`Language switched to ${lang === 'en' ? 'English' : lang === 'hi' ? 'हिन्दी' : 'ಕನ್ನಡ'}`);
+      repeatCurrentPrompt();
+    }
+
+    function setLanguageAndAdvance(lang) {
+      setLanguage(lang);
+      goToStep(1);
+    }
+
+    function updateStepLanguageUI() {
+      renderComplaints();
+      if (currentStep === 3 && selectedComplaint) {
+        renderCurrentQuestion();
+      }
+    }
+
+    // Navigation
+    function goToStep(step) {
+      // Hide all steps
+      for (let i = 0; i <= 5; i++) {
+        const el = document.getElementById(`step-${i}-${getStepName(i)}`);
+        if (el) el.classList.add('hidden');
+      }
+
+      currentStep = step;
+      const activeEl = document.getElementById(`step-${step}-${getStepName(step)}`);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      // Update progress bar
+      const percent = Math.min(100, Math.round(((step + 1) / 6) * 100));
+      document.getElementById('progress-bar-fill').style.width = `${percent}%`;
+      document.getElementById('progress-percent-text').innerText = `${percent}% Completed`;
+      document.getElementById('progress-step-text').innerText = `Step ${step + 1} of 6: ${getStepTitle(step)}`;
+
+      initLucide();
+      repeatCurrentPrompt();
+    }
+
+    function getStepName(step) {
+      const names = ['language', 'consent', 'complaint', 'questions', 'scan', 'summary'];
+      return names[step];
+    }
+
+    function getStepTitle(step) {
+      const titles = ['Language Selection', 'Consent & ABHA', 'Chief Complaint', 'Clinical Questions', 'Scan Records', 'Review Summary'];
+      return titles[step];
+    }
+
+    function switchMode(mode) {
+      stopSpeechPlayback();
+      const patientContainer = document.getElementById('patient-flow-container');
+      const progressContainer = document.getElementById('patient-progress-container');
+      const voicePanel = document.getElementById('voice-assistant-panel');
+      const doctorView = document.getElementById('doctor-dashboard-view');
+      const patientTab = document.getElementById('mode-patient-tab');
+      const doctorTab = document.getElementById('mode-doctor-tab');
+
+      if (mode === 'doctor') {
+        patientContainer.classList.add('hidden');
+        progressContainer.classList.add('hidden');
+        voicePanel.classList.add('hidden');
+        doctorView.classList.remove('hidden');
+
+        doctorTab.className = 'flex items-center gap-1.5 px-3 py-1 font-bold rounded-lg bg-[#1B4E7A] text-white transition-all';
+        patientTab.className = 'flex items-center gap-1.5 px-3 py-1 font-bold rounded-lg text-[#4C7C72] hover:text-[#0F2F4A] transition-all';
+        renderDoctorQueue();
+      } else {
+        patientContainer.classList.remove('hidden');
+        progressContainer.classList.remove('hidden');
+        voicePanel.classList.remove('hidden');
+        doctorView.classList.add('hidden');
+
+        patientTab.className = 'flex items-center gap-1.5 px-3 py-1 font-bold rounded-lg bg-[#1B4E7A] text-white transition-all';
+        doctorTab.className = 'flex items-center gap-1.5 px-3 py-1 font-bold rounded-lg text-[#4C7C72] hover:text-[#0F2F4A] transition-all';
+      }
+      initLucide();
+    }
+
+    // Chief Complaints
+    function renderComplaints() {
+      const container = document.getElementById('complaints-grid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      COMPLAINTS.forEach(c => {
+        const isSelected = selectedComplaint && selectedComplaint.id === c.id;
+        const name = currentLang === 'hi' ? c.nameHi : currentLang === 'kn' ? c.nameKn : c.nameEn;
+
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+          isSelected ? 'border-[#1B4E7A] bg-teal-50/50 shadow-xs' : 'border-[#D7E6E1] bg-white hover:border-slate-300'
+        }`;
+        card.onclick = () => selectComplaint(c);
+
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl ${c.redFlag ? 'bg-rose-100 text-rose-700' : 'bg-teal-50 text-teal-800'} flex items-center justify-center">
+              <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <p class="font-bold text-sm text-[#0F2F4A]">${name}</p>
+              ${c.redFlag ? '<span class="text-[10px] font-bold text-rose-600">Priority Triage Item</span>' : '<span class="text-[10px] text-[#4C7C72]">Routine OPD Intake</span>'}
+            </div>
+          </div>
+          <div class="w-5 h-5 rounded-full border-2 ${isSelected ? 'border-[#1B4E7A] bg-[#1B4E7A]' : 'border-slate-300'} flex items-center justify-center text-white">
+            ${isSelected ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      initLucide();
+    }
+
+    function selectComplaint(complaint) {
+      selectedComplaint = complaint;
+      renderComplaints();
+      const nextBtn = document.getElementById('complaint-next-btn');
+      nextBtn.disabled = false;
+      nextBtn.className = 'px-6 py-2.5 rounded-xl bg-[#1B4E7A] text-white font-bold hover:bg-[#0F2F4A] flex items-center gap-2 cursor-pointer';
+
+      if (complaint.redFlag) {
+        isRedFlag = true;
+        document.getElementById('header-redflag-dot').classList.remove('hidden');
+      }
+      showToast(`Selected: ${currentLang === 'hi' ? complaint.nameHi : currentLang === 'kn' ? complaint.nameKn : complaint.nameEn}`);
+    }
+
+    function startQuestionTree() {
+      if (!selectedComplaint) return;
+      currentQuestionIdx = 0;
+      patientAnswers = {};
+      goToStep(3);
+      renderCurrentQuestion();
+    }
+
+    // Question Tree Rendering
+    function renderCurrentQuestion() {
+      if (!selectedComplaint) return;
+      const questions = selectedComplaint.questions;
+      const q = questions[currentQuestionIdx];
+      if (!q) return;
+
+      document.getElementById('question-count-badge').innerText = `Question ${currentQuestionIdx + 1} of ${questions.length}`;
+      const qText = currentLang === 'hi' ? q.textHi : currentLang === 'kn' ? q.textKn : q.textEn;
+      document.getElementById('current-question-text').innerText = qText;
+
+      const optionsContainer = document.getElementById('question-options-container');
+      optionsContainer.innerHTML = '';
+
+      q.options.forEach((opt, idx) => {
+        const optLabel = currentLang === 'hi' ? opt.labelHi : currentLang === 'kn' ? opt.labelKn : opt.labelEn;
+        const isChosen = patientAnswers[q.id] === optLabel;
+
+        const optBtn = document.createElement('button');
+        optBtn.className = `w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
+          isChosen ? 'border-[#1B4E7A] bg-teal-50 text-[#0F2F4A] font-bold' : 'border-[#D7E6E1] bg-white hover:bg-slate-50 text-slate-800'
+        }`;
+        optBtn.onclick = () => selectQuestionOption(q.id, opt);
+
+        optBtn.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-6 h-6 rounded-full bg-slate-100 text-xs font-bold flex items-center justify-center text-slate-600">${idx + 1}</span>
+            <span class="text-sm">${optLabel}</span>
+          </div>
+          ${opt.redFlag ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700">Urgent</span>' : ''}
+        `;
+        optionsContainer.appendChild(optBtn);
+      });
+
+      const nextBtn = document.getElementById('question-next-btn');
+      if (patientAnswers[q.id]) {
+        nextBtn.disabled = false;
+        nextBtn.className = 'px-6 py-2.5 rounded-xl bg-[#1B4E7A] text-white font-bold hover:bg-[#0F2F4A] flex items-center gap-2 cursor-pointer';
+      } else {
+        nextBtn.disabled = true;
+        nextBtn.className = 'px-6 py-2.5 rounded-xl bg-slate-300 text-slate-500 font-bold cursor-not-allowed flex items-center gap-2';
+      }
+
+      speakPromptText(qText);
+    }
+
+    function selectQuestionOption(qId, opt) {
+      const optLabel = currentLang === 'hi' ? opt.labelHi : currentLang === 'kn' ? opt.labelKn : opt.labelEn;
+      patientAnswers[qId] = optLabel;
+      if (opt.redFlag) {
+        isRedFlag = true;
+        document.getElementById('header-redflag-dot').classList.remove('hidden');
+        document.getElementById('question-redflag-tag').classList.remove('hidden');
+      }
+      renderCurrentQuestion();
+    }
+
+    function previousQuestion() {
+      if (currentQuestionIdx > 0) {
+        currentQuestionIdx--;
+        renderCurrentQuestion();
+      } else {
+        goToStep(2);
+      }
+    }
+
+    function nextQuestion() {
+      if (!selectedComplaint) return;
+      if (currentQuestionIdx < selectedComplaint.questions.length - 1) {
+        currentQuestionIdx++;
+        renderCurrentQuestion();
+      } else {
+        goToStep(4);
+      }
+    }
+
+    // Step 4: Medical Documents Upload
+    function handleFileUpload(e) {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      const newDoc = {
+        name: file.name,
+        type: file.type.includes('pdf') ? 'PDF Report' : 'Image Slip',
+        date: new Date().toLocaleDateString('en-GB')
+      };
+      scannedDocs.push(newDoc);
+      renderScannedDocs();
+      showToast(`Scanned & parsed: ${file.name}`);
+    }
+
+    function loadSampleDoc(sampleType) {
+      if (sampleType === 'bp_prescription') {
+        scannedDocs.push({ name: 'Prescription_Amlodipine5mg.jpg', type: 'Prescription Slip (Cardiology)', date: '12 Jan 2026' });
+      } else {
+        scannedDocs.push({ name: 'CBC_LabReport_CityLab.pdf', type: 'Laboratory Blood Report', date: '04 Feb 2026' });
+      }
+      renderScannedDocs();
+      showToast('Sample hospital document attached!');
+    }
+
+    function renderScannedDocs() {
+      const list = document.getElementById('scanned-docs-list');
+      if (!list) return;
+      list.innerHTML = '';
+      scannedDocs.forEach((doc, idx) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-3 rounded-xl border border-teal-200 bg-teal-50/50';
+        item.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="file-check" class="w-4 h-4 text-teal-700"></i>
+            <div>
+              <p class="text-xs font-bold text-[#0F2F4A]">${doc.name}</p>
+              <p class="text-[10px] text-[#4C7C72]">${doc.type} · ${doc.date}</p>
+            </div>
+          </div>
+          <button onclick="removeDoc(${idx})" class="text-slate-400 hover:text-rose-600">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        `;
+        list.appendChild(item);
+      });
+      initLucide();
+    }
+
+    function removeDoc(idx) {
+      scannedDocs.splice(idx, 1);
+      renderScannedDocs();
+    }
+
+    // Step 5: Summary Generation
+    function prepareSummary() {
+      if (!selectedComplaint) return;
+      const cName = currentLang === 'hi' ? selectedComplaint.nameHi : currentLang === 'kn' ? selectedComplaint.nameKn : selectedComplaint.nameEn;
+      document.getElementById('summary-complaint-name').innerText = cName;
+      document.getElementById('summary-language-name').innerText = currentLang === 'hi' ? 'हिन्दी' : currentLang === 'kn' ? 'ಕನ್ನಡ' : 'English';
+
+      const triageBadge = document.getElementById('summary-triage-badge');
+      const redAlert = document.getElementById('summary-redflag-alert');
+
+      if (isRedFlag || selectedComplaint.redFlag) {
+        triageBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 animate-pulse';
+        triageBadge.innerText = 'EMERGENCY TRIAGE';
+        redAlert.classList.remove('hidden');
+      } else {
+        triageBadge.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-teal-100 text-teal-800';
+        triageBadge.innerText = 'Routine OPD';
+        redAlert.classList.add('hidden');
+      }
+
+      const answersList = document.getElementById('summary-answers-list');
+      answersList.innerHTML = '';
+      Object.keys(patientAnswers).forEach(k => {
+        const item = document.createElement('div');
+        item.className = 'p-2.5 rounded-lg bg-white border border-[#D7E6E1] flex justify-between gap-2';
+        item.innerHTML = `
+          <span class="text-xs text-[#4C7C72]">${k.replace(/_/g, ' ')}</span>
+          <span class="text-xs font-bold text-[#0F2F4A]">${patientAnswers[k]}</span>
+        `;
+        answersList.appendChild(item);
+      });
+
+      if (scannedDocs.length > 0) {
+        document.getElementById('summary-scanned-container').classList.remove('hidden');
+        document.getElementById('summary-scanned-count').innerText = `${scannedDocs.length} record(s) linked to ABHA profile`;
+      }
+    }
+
+    function readSummaryAloud() {
+      const cName = currentLang === 'hi' ? selectedComplaint.nameHi : currentLang === 'kn' ? selectedComplaint.nameKn : selectedComplaint.nameEn;
+      let text = `Summary for Chief Complaint: ${cName}. `;
+      if (isRedFlag) {
+        text += 'Warning: emergency triage priority has been flagged. ';
+      }
+      Object.keys(patientAnswers).forEach(k => {
+        text += `${patientAnswers[k]}. `;
+      });
+      speakPromptText(text);
+    }
+
+    function submitCaseToDoctorQueue() {
+      const cName = currentLang === 'hi' ? selectedComplaint.nameHi : currentLang === 'kn' ? selectedComplaint.nameKn : selectedComplaint.nameEn;
+      const newPatient = {
+        id: Date.now(),
+        name: 'Ramesh K.',
+        age: '48M',
+        complaint: cName,
+        priority: isRedFlag ? 'CRITICAL' : 'ROUTINE',
+        waitTime: 'Just now',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      doctorQueue.unshift(newPatient);
+      selectedDoctorPatientId = newPatient.id;
+      showToast('Case Sheet submitted successfully to Doctor Queue!');
+      switchMode('doctor');
+    }
+
+    // Doctor Dashboard
+    function renderDoctorQueue() {
+      const queueList = document.getElementById('doctor-patient-queue');
+      const countEl = document.getElementById('doc-queue-count');
+      if (!queueList) return;
+      countEl.innerText = `${doctorQueue.length} Patients Waiting`;
+      queueList.innerHTML = '';
+
+      doctorQueue.forEach(p => {
+        const isSelected = p.id === selectedDoctorPatientId;
+        const card = document.createElement('div');
+        card.className = `p-3 rounded-xl border cursor-pointer transition-all ${
+          isSelected ? 'border-[#1B4E7A] bg-teal-50' : 'border-[#D7E6E1] bg-white hover:bg-slate-50'
+        }`;
+        card.onclick = () => {
+          selectedDoctorPatientId = p.id;
+          renderDoctorQueue();
+        };
+
+        const badgeColor = p.priority === 'CRITICAL' ? 'bg-rose-100 text-rose-800' : p.priority === 'MODERATE' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800';
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-[#0F2F4A]">${p.name} (${p.age})</span>
+            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${badgeColor}">${p.priority}</span>
+          </div>
+          <p class="text-xs text-[#4C7C72] truncate">${p.complaint}</p>
+          <span class="text-[10px] text-slate-400 mt-1 block">${p.waitTime} · ${p.time}</span>
+        `;
+        queueList.appendChild(card);
+      });
+
+      renderDoctorPatientDetail();
+    }
+
+    function renderDoctorPatientDetail() {
+      const detailContainer = document.getElementById('doctor-patient-detail');
+      const p = doctorQueue.find(x => x.id === selectedDoctorPatientId) || doctorQueue[0];
+      if (!p) return;
+
+      detailContainer.innerHTML = `
+        <div class="flex items-center justify-between pb-3 border-b border-[#D7E6E1] mb-4">
+          <div>
+            <h3 class="text-base font-extrabold text-[#0F2F4A]">${p.name}</h3>
+            <p class="text-xs text-[#4C7C72]">Age: ${p.age} · ABHA: 91-4428-1192-3021 · Queue #${p.id}</p>
+          </div>
+          <span class="px-3 py-1 text-xs font-extrabold rounded-full ${p.priority === 'CRITICAL' ? 'bg-rose-100 text-rose-800 animate-pulse' : 'bg-teal-100 text-teal-800'}">
+            ${p.priority} TRIAGE
+          </span>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <div>
+            <p class="font-bold text-[#4C7C72] uppercase tracking-wider mb-1">Pre-Intake Chief Complaint:</p>
+            <p class="text-sm font-extrabold text-[#0F2F4A] bg-white p-2.5 rounded-xl border border-[#D7E6E1]">${p.complaint}</p>
+          </div>
+
+          <div>
+            <p class="font-bold text-[#4C7C72] uppercase tracking-wider mb-1">Structured Voice Answers:</p>
+            <div class="p-3 bg-white rounded-xl border border-[#D7E6E1] space-y-1.5">
+              <p><span class="font-semibold text-slate-600">Reported Onset:</span> 2 days ago</p>
+              <p><span class="font-semibold text-slate-600">Severity Flag:</span> ${p.priority === 'CRITICAL' ? 'Red flag symptom affirmed by patient' : 'Mild-moderate severity'}</p>
+              <p><span class="font-semibold text-slate-600">Language of Intake:</span> Multilingual voice transcription verified</p>
+            </div>
+          </div>
+
+          <div>
+            <p class="font-bold text-[#4C7C72] uppercase tracking-wider mb-1">Doctor Voice Clinical Dictation:</p>
+            <div class="flex gap-2">
+              <textarea id="doctor-notes-input" rows="2" placeholder="Dictate or type clinical impression & prescription..." class="w-full p-2.5 rounded-xl border border-[#D7E6E1] bg-white text-xs text-[#0F2F4A]"></textarea>
+              <button onclick="toggleDoctorDictation()" class="px-3 rounded-xl bg-[#1B4E7A] text-white flex items-center justify-center hover:bg-[#0F2F4A]">
+                <i data-lucide="mic" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-[#D7E6E1] flex items-center justify-end gap-2">
+            <button onclick="showToast('Prescription saved & pushed to ABHA locker')" class="px-4 py-2 rounded-xl bg-[#2E9E6B] text-white font-bold hover:bg-[#1C6B3A]">
+              Complete & Sign Case
+            </button>
+          </div>
+        </div>
+      `;
+      initLucide();
+    }
+
+    function toggleDoctorDictation() {
+      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        showToast('Speech recognition not supported in this browser.');
+        return;
+      }
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SpeechRec();
+      rec.lang = currentLang === 'hi' ? 'hi-IN' : currentLang === 'kn' ? 'kn-IN' : 'en-IN';
+      showToast('Listening to doctor dictation...');
+      rec.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        const input = document.getElementById('doctor-notes-input');
+        if (input) input.value += (input.value ? ' ' : '') + text;
+      };
+      rec.start();
+    }
+
+    // Voice Synthesis & Speech Recognition
+    function speakGreeting() {
+      const greeting = currentLang === 'hi'
+        ? 'संजीवनी एआई में आपका स्वागत है। कृपया अपनी भाषा चुनें या आगे बढ़ें।'
+        : currentLang === 'kn'
+        ? 'ಸಂಜೀವನಿ ಎಐ ಗೆ ಸ್ವಾಗತ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.'
+        : 'Welcome to Sanjeevani AI voice case taking. Please select your preferred language.';
+      speakPromptText(greeting);
+    }
+
+    function repeatCurrentPrompt() {
+      if (currentStep === 0) {
+        speakGreeting();
+      } else if (currentStep === 1) {
+        speakPromptText(currentLang === 'hi' ? 'कृपया अपनी सहमति और डिजिटल स्वास्थ्य आईडी की पुष्टि करें।' : currentLang === 'kn' ? 'ದಯವಿಟ್ಟು ನಿಮ್ಮ ಸಮ್ಮತಿ ಮತ್ತು ಡಿಜಿಟಲ್ ಹೆಲ್ತ್ ಐಡಿ ದೃಢೀಕರಿಸಿ.' : 'Please confirm your consent and digital health ID.');
+      } else if (currentStep === 2) {
+        speakPromptText(currentLang === 'hi' ? 'आज आपको क्या तकलीफ है? कृपया अपना मुख्य लक्षण बताएं।' : currentLang === 'kn' ? 'ಇಂದು ನಿಮಗೆ ಯಾವ ತೊಂದರೆಯಾಗಿದೆ? ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮುಖ್ಯ ಲಕ್ಷಣ ತಿಳಿಸಿ.' : 'What brings you in today? Please select or say your chief complaint.');
+      } else if (currentStep === 3) {
+        renderCurrentQuestion();
+      } else if (currentStep === 4) {
+        speakPromptText(currentLang === 'hi' ? 'क्या आपके पास कोई पुरानी पर्ची या रिपोर्ट है? उसे यहाँ अपलोड करें।' : currentLang === 'kn' ? 'ಹಳೆಯ ಚೀಟಿ ಅಥವಾ ವರದಿ ಇದ್ದರೆ ದಯವಿಟ್ಟು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ.' : 'You can scan your previous medical prescription or lab report.');
+      } else if (currentStep === 5) {
+        prepareSummary();
+        readSummaryAloud();
+      }
+    }
+
+    function speakPromptText(text) {
+      if (!('speechSynthesis' in window)) return;
+      stopSpeechPlayback();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = currentLang === 'hi' ? 'hi-IN' : currentLang === 'kn' ? 'kn-IN' : 'en-IN';
+      utterance.rate = 0.95;
+
+      utterance.onstart = () => {
+        isSpeaking = true;
+        document.getElementById('ai-status-badge').innerText = 'Speaking';
+        document.getElementById('ai-status-badge').className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800';
+      };
+
+      utterance.onend = () => {
+        isSpeaking = false;
+        document.getElementById('ai-status-badge').innerText = 'Ready';
+        document.getElementById('ai-status-badge').className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function stopSpeechPlayback() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      isSpeaking = false;
+      document.getElementById('ai-status-badge').innerText = 'Ready';
+      document.getElementById('ai-status-badge').className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+    }
+
+    // Speech-to-Text Recognition
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return;
+      speechRecognitionInstance = new SpeechRecognition();
+      speechRecognitionInstance.continuous = false;
+      speechRecognitionInstance.interimResults = true;
+
+      speechRecognitionInstance.onstart = () => {
+        isListening = true;
+        document.getElementById('listening-wave-container').classList.remove('hidden');
+        document.getElementById('main-mic-button').classList.add('pulse-ring', 'bg-red-600');
+        document.getElementById('mic-status-label').innerText = 'Listening to your voice...';
+      };
+
+      speechRecognitionInstance.onresult = (event) => {
+        const transcript = Array.from(event.results).map(r => r[0].transcript).join('');
+        document.getElementById('mic-detected-transcript').innerText = `"${transcript}"`;
+        matchSpokenCommand(transcript);
+      };
+
+      speechRecognitionInstance.onerror = () => {
+        stopListening();
+      };
+
+      speechRecognitionInstance.onend = () => {
+        stopListening();
+      };
+    }
+
+    function toggleVoiceInput() {
+      if (!speechRecognitionInstance) {
+        showToast('Speech recognition not supported in your browser.');
+        return;
+      }
+      if (isListening) {
+        stopListening();
+      } else {
+        stopSpeechPlayback();
+        speechRecognitionInstance.lang = currentLang === 'hi' ? 'hi-IN' : currentLang === 'kn' ? 'kn-IN' : 'en-IN';
+        try {
+          speechRecognitionInstance.start();
+        } catch (err) {
+          console.log(err);
+        }
+      }
+    }
+
+    function stopListening() {
+      isListening = false;
+      if (speechRecognitionInstance) {
+        try { speechRecognitionInstance.stop(); } catch(e){}
+      }
+      document.getElementById('listening-wave-container').classList.add('hidden');
+      document.getElementById('main-mic-button').classList.remove('pulse-ring', 'bg-red-600');
+      document.getElementById('mic-status-label').innerText = 'Click to Speak / बोलें / ಮಾತನಾಡಿ';
+    }
+
+    function matchSpokenCommand(transcript) {
+      const t = transcript.toLowerCase();
+
+      // Language switching commands
+      if (t.includes('hindi') || t.includes('हिंदी') || t.includes('हिन्दी')) {
+        setLanguage('hi');
+        return;
+      }
+      if (t.includes('kannada') || t.includes('ಕನ್ನಡ')) {
+        setLanguage('kn');
+        return;
+      }
+      if (t.includes('english')) {
+        setLanguage('en');
+        return;
+      }
+
+      // Step 2: Complaint matching
+      if (currentStep === 2) {
+        COMPLAINTS.forEach(c => {
+          if (
+            t.includes(c.id) ||
+            t.includes('fever') || t.includes('बुखार') || t.includes('ಜ್ವರ') ||
+            t.includes('chest') || t.includes('दर्द') || t.includes('ಎದೆ') ||
+            t.includes('cough') || t.includes('खांसी') || t.includes('ಕೆಮ್ಮು')
+          ) {
+            selectComplaint(c);
+          }
+        });
+      }
+
+      // Step 3: Question options matching
+      if (currentStep === 3 && selectedComplaint) {
+        const q = selectedComplaint.questions[currentQuestionIdx];
+        if (q) {
+          q.options.forEach((opt) => {
+            const l = (currentLang === 'hi' ? opt.labelHi : currentLang === 'kn' ? opt.labelKn : opt.labelEn).toLowerCase();
+            if (t.includes(l.slice(0, 4))) {
+              selectQuestionOption(q.id, opt);
+            }
+          });
+        }
+      }
+    }
+
+    // Direct Self Download
+    function downloadSelfHTML() {
+      const htmlContent = document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sanjeevani-ai-voice-assistant.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Downloaded sanjeevani-ai-voice-assistant.html successfully!');
+    }
+
+    // Toast helper
+    function showToast(msg) {
+      const toast = document.getElementById('toast-notification');
+      const text = document.getElementById('toast-text');
+      if (!toast || !text) return;
+      text.innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

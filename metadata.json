@@ -1,0 +1,6 @@
+{
+  "name": "Sanjeevani AI - Voice Case Taking",
+  "description": "Multilingual voice assistant for patient case taking and clinical triage supporting English, Hindi, and Kannada.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
